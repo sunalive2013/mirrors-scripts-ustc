@@ -1,0 +1,5 @@
+#/bin/bash
+
+## scan all archive mirror status every 5 minutes, if any error found,
+## try to re-rsync for non-fatal errors (on DNS Error, Timeout, etc).
+## Email administrators if significant errors found.

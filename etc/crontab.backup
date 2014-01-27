@@ -1,0 +1,102 @@
+# Edit this file to introduce tasks to be run by cron.
+# 
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+# 
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').# 
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+# 
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+# 
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+# 
+# For more information see the manual pages of crontab(5) and cron(8)
+# 
+# m h  dom mon dow   command
+#45 	*/6	* * *	/home/mirror/bin/ftpsync 
+25 	3	* * *	/home/mirror/bin/ftpsync sync:archive:debian-multimedia
+##0 	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:debian-cd
+23 	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:debian-backports
+43 	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:debian-security
+##53 	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:debian-volatile
+0	3	* * tue /home/mirror/bin/cd-mirror
+55	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:ubuntu
+0 	3	* * *	/home/mirror/bin/ftpsync sync:archive:emdebian
+#13 	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:nexenta
+#18	*/6	* * *	/home/mirror/bin/ftpsync sync:archive:kali
+#38	*/12	* * *	/home/mirror/bin/ftpsync sync:archive:kali-security
+25 	3	* * *	/home/mirror/bin/ustcsync sync:archive:kali-images
+37 	4	* * *	/home/mirror/bin/ustcsync sync:archive:eclipse
+43 	*/4 	* * *	/home/mirror/bin/ustcsync sync:archive:gentoo
+33 	* 	* * *	/home/mirror/bin/ustcsync sync:archive:gentoo-portage
+43 	4	* * *	/home/mirror/bin/ustcsync sync:archive:gnu
+46	*/1	* * *	/home/mirror/bin/ustcsync sync:archive:archlinux
+5	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:opensuse
+37	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:kdemod
+17	6	* * *	/home/mirror/bin/ustcsync sync:archive:kde
+17	6	* * *	/home/mirror/bin/ustcsync sync:archive:gnome
+47	7	* * *	/home/mirror/bin/ustcsync sync:archive:cygwin
+17	6,18	* * *	/home/mirror/bin/ustcsync sync:archive:cygwinports
+50	2,14	* * *	/home/mirror/bin/ustcsync sync:archive:ctan
+20	2,14	* * *	/home/mirror/bin/ustcsync sync:archive:cpan
+27	2,14	* * *	/home/mirror/bin/ustcsync sync:archive:cran
+42	6	* * *	/home/mirror/bin/ustcsync sync:archive:qomo
+32	6	* * *	/home/mirror/bin/ustcsync sync:archive:backtrack
+29	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:puppy
+29	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:linux-kernel
+49	5	* * *	/home/mirror/bin/ustcsync sync:archive:xorg
+18	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:deepin
+28 	2	* * *	/home/mirror/bin/ustcsync sync:archive:deepin-cd
+57	21	* * *	/home/mirror/bin/ustcsync sync:archive:startos
+28 	22	* * *	/home/mirror/bin/ustcsync sync:archive:startos-cd
+38 	3	* * *	/home/mirror/bin/ustcsync sync:archive:linuxmint
+48 	2	* * *	/home/mirror/bin/ustcsync sync:archive:linuxmint-cd
+48	*/6	* * *	/home/mirror/bin/ustcsync sync:archive:ubuntu-releases
+##58	1	* * *	/home/mirror/bin/ustcsync sync:archive:ubuntu-cdimage
+8	7	* * *	/home/mirror/bin/ustcsync sync:archive:fink
+26	7	* * *	/home/mirror/bin/ustcsync sync:archive:macports
+30	6	* * *	/home/mirror/bin/ustcsync sync:archive:loongson2f
+30	4	* * *	/home/mirror/bin/ustcsync sync:archive:dotdeb
+#50	*/4	* * *	/home/mirror/bin/ustcsync sync:archive:dotdeb-php53
+24	3	*/2 * *	/home/mirror/bin/ustcsync sync:archive:freebsd
+6	*	* * *	/home/mirror/bin/ustcsync sync:archive:centos
+26	*/2	* * *	/home/mirror/bin/ustcsync sync:archive:scientific
+36	*	* * *	/home/mirror/bin/ustcsync sync:archive:epel
+49	*/2	* * *	/home/mirror/bin/ustcsync sync:archive:fedora-linux
+49	*/2	* * *	/home/mirror/bin/ustcsync sync:archive:rpmfusion
+#15	*/2	* * *	/home/mirror/bin/ustcsync sync:archive:mozilla-current
+20	*/8	* * * 	/home/mirror/bin/ustcsync sync:archive:slackware
+23	8	* * *	/home/mirror/bin/ustcsync sync:archive:turnkeylinux
+#20	*/8	* * * 	/home/mirror/bin/ustcsync sync:archive:tdf
+20	11	* * * 	/home/mirror/bin/ustcsync sync:archive:knoppix
+20	12	* * * 	/home/mirror/bin/ustcsync sync:archive:knoppix-dvd
+#39	3	*/2 * *	/home/mirror/bin/ustcsync sync:archive:meego
+#1	3	*/7 * *	/home/mirror/bin/ustcsync sync:archive:uksm
+52	8,20	* * *	/home/mirror/bin/ustcsync sync:archive:kde-application
+12	9	* * *	/home/mirror/bin/ustcsync sync:archive:raspbian
+12	10	* * *	/home/mirror/bin/ustcsync sync:archive:bioc_2_11
+12	11	* * *	/home/mirror/bin/ustcsync sync:archive:bioc_2_12
+32	*/5	* * *	/home/mirror/bin/ustcsync sync:archive:videolan-ftp
+52	4,16	* * *	/home/mirror/bin/ustcsync sync:archive:qtproject
+02	3	* * *	/home/mirror/bin/ustcsync sync:archive:tlpretest
+
+#0	6,12,18	* * *	/home/mirror/bin/mirror-chromium > /dev/null 
+14	5	* * *	/home/mirror/bin/mirror-apt-mirror > /dev/null
+*/30	*	* * *	(cd /srv/ftp3/git-repos/linux.git; git fetch -t ; git update-server-info) > /dev/null 2>&1
+1	1	* * *	(cd /srv/ftp3/git-repos/homebrew.git; git fetch -t ; git update-server-info) > /dev/null 2>&1
+*/5	*	* * *	/home/mirror/bin/get-mirror-status.py > /srv/www-misc/status/status.txt
+*/5	*	* * *	/home/mirror/bin/genindex/genindex.py
+##1	*	* * *	/usr/share/awstats/tools/awstats_buildstaticpages.pl -config=http -update -dir=/srv/www-misc/awstats/ > /dev/null 2>&1	
+##10	*	* * *	/usr/share/awstats/tools/awstats_buildstaticpages.pl -config=ftp -update -dir=/srv/www-misc/awstats/ > /dev/null 2>&1	
+##20	*	* * *	/usr/share/awstats/tools/awstats_buildstaticpages.pl -config=apache -update -dir=/srv/www-misc/awstats/ > /dev/null 2>&1	
+#0	5	* * *	/home/mirror/bin/backup > /dev/null 2>&1
+#*/5	*	* * *	/home/mirror/bin/clean-cache > /dev/null 
+##*/2	*	* * *	/home/mirror/bin/cache-hot-files > /dev/null 
+

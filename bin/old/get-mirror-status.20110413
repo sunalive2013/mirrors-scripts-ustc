@@ -1,0 +1,77 @@
+#!/bin/bash
+
+## print the mirror sync status
+
+## algo:
+##  foreach dir in log/
+##	if exist *.log; 
+##		mirror is under syncing, print the start time (create time)
+##	if exist *.log.0
+##		mirror is synced, print the finish time (access time)
+##	if exist *.error.0 && .error.0 is not null
+##		there are errors, print status
+
+LOGBASE="$HOME/log/"
+
+TD_RUNNING="<td class='td-archive-running'></td>"
+TD_FINISHED="<td class='td-archive-finished'></td>"
+_TD_ARCHIVE_NAME="<td class='td-archive-name'>"
+_TD_ARCHIVE_SYNCTIME="<td class='td-archive-synctime'>"
+TD_SUCCEED="<td class='td-archive-succeed'></td>"
+TD_FAIL="<td class='td-archive-fail'></td>"
+TD_UNKNOWN="<td class='td-archive-unknown'></td>"
+TD_="</td>"
+_TR="<tr>"
+TR_="</tr>\n"
+
+echo -ne "<p><span id='update-time'>$(date '+%Y-%m-%d %H:%M:%S')</span></p>"
+
+echo -ne "<table class='tbl-status'><tr>"
+echo -ne "<th class='th-archive-name'></th>"
+echo -ne "<th class='th-archive-syncstatus'></th>"
+echo -ne "<th class='th-archive-synctime'></th>"
+echo -ne "<th class='th-archive-exitstatus'></th>"
+
+for mirror in `ls ${LOGBASE}`;
+do
+    echo -ne "${_TR}"
+    echo -ne "${_TD_ARCHIVE_NAME}${mirror}${TD_}"
+
+    LOGDIR=${LOGBASE}${mirror}
+
+    if [ -f ${LOGDIR}/ftpsync-${mirror}.log ];
+    then
+	echo -ne "${TD_RUNNING}"
+	echo -ne "${_TD_ARCHIVE_SYNCTIME}$(date "+%Y-%m-%d %H:%M:%S" -r ${LOGDIR}/ftpsync-${mirror}.log)${TD_}"
+	echo -ne "${TD_UNKNOWN}"
+    elif [ -f ${LOGDIR}/ustcsync-${mirror}.log ];
+    then
+	echo -ne "${TD_RUNNING}"
+	echo -ne "${_TD_ARCHIVE_SYNCTIME}$(date "+%Y-%m-%d %H:%M:%S" -r ${LOGDIR}/ustcsync-${mirror}.log)${TD_}"
+	echo -ne "${TD_UNKNOWN}"
+    else
+	echo -ne "${TD_FINISHED}"
+	if [ -f ${LOGDIR}/ftpsync-${mirror}.log.0 ];
+	then
+	echo -ne "${_TD_ARCHIVE_SYNCTIME}$(date "+%Y-%m-%d %H:%M:%S" -r ${LOGDIR}/ftpsync-${mirror}.log.0)${TD_}"
+	    if grep -q 'ERROR' ${LOGDIR}/ftpsync-${mirror}.log.0;
+	    then
+		echo -ne "${TD_FAIL}"
+	    else
+		echo -ne "${TD_SUCCEED}"
+	    fi
+	else
+	echo -ne "${_TD_ARCHIVE_SYNCTIME}$(date "+%Y-%m-%d %H:%M:%S" -r ${LOGDIR}/ustcsync-${mirror}.log.0)${TD_}"
+	    if grep -q 'rsync error' ${LOGDIR}/ustcsync-${mirror}.log.0;
+	    then
+		echo -ne "${TD_FAIL}"
+	    else
+		echo -ne "${TD_SUCCEED}"
+	    fi
+	fi
+    fi
+
+    echo -ne "${TR_}"
+done
+
+echo -e "</table>"

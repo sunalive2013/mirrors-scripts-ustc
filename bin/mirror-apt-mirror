@@ -1,0 +1,18 @@
+#!/bin/bash
+
+## author: Zhang Cheng <StephenPCG@gmail.com>
+## If you have any problems using this script, please contact me.
+
+LOGBASE="${HOME}/log/apt-mirror"
+LOGFILE="${LOGBASE}/apt-mirror.log"
+
+APT_MIRROR_PATH=$(grep -e '^[^#].*mirror_path' /etc/apt/mirror.list | awk '{print $3}')
+
+apt-mirror >> ${LOGFILE} 2>&1
+
+#bash /srv/apt-mirror-home/var/clean.sh >> ${LOGFILE} 2>&1
+
+echo $(du -h --max-depth 0 ${APT_MIRROR_PATH}) >> ${LOGFILE}
+
+savelog ${LOGFILE}
+

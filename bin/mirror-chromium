@@ -1,0 +1,49 @@
+#!/bin/bash
+
+## author: Zhang Cheng <StephenPCG@gmail.com>
+## If you have any problems using this script, please contact me.
+
+LOGBASE="$HOME/log/chromium-buildbot"
+LOGFILE="${LOGBASE}/update-chromium.log"
+
+TO="/srv/ftp3/chromium-buildbot"
+#FROM="http://build.chromium.org/buildbot/snapshots"
+FROM="http://build.chromium.org/f/chromium/snapshots"
+ARCH="Linux Linux_x64 Mac Win"
+
+for arch in $ARCH;
+do
+    to="${TO}/${arch}"
+    [[ -e "${to}" ]] || mkdir -p "${to}"
+
+    CURRENT=`cat ${to}/LATEST`;
+    LATEST=`wget -q ${FROM}/${arch}/LATEST -O-`;
+
+    if [ "$CURRENT" != "$LATEST" ]; then
+	case $arch in
+	    Mac)
+		os="mac"
+		;;
+	    Win)
+		os="win32"
+		;;
+	    *)
+		os="linux"
+		;;
+	esac
+
+	# download the latest zip and change log
+	wget -a ${LOGFILE} "${FROM}/${arch}/${LATEST}/chrome-${os}.zip" -O "${to}/${LATEST}.zip"
+	wget -a ${LOGFILE} "${FROM}/${arch}/${LATEST}/changelog.xml" -O "${to}/changelog.xml"
+
+	# remove old soft link and create new
+	# TODO BUG, delete *.zip files except $LATEST.zip using find, instead of $CURRENT.zip
+	[[ -e "${to}/${CURRENT}.zip" ]] && rm ${to}/${CURRENT}.zip
+	ln -s -f "${LATEST}.zip" "${to}/chrome-${os}.zip"
+	echo "$LATEST" > "${to}/LATEST"
+    fi
+done
+
+echo $(du -h --max-depth 0 ${TO}) >> ${LOGFILE}
+
+savelog ${LOGFILE}

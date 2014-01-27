@@ -1,0 +1,33 @@
+#!/bin/bash
+
+#tail -n 5000 /home/log/nginx/access.log | \
+    #while read line; \
+    #do \
+	#filename=$(echo $line | awk '{print $7}'); \
+	#if [ -f "/srv/ftp/$filename" ]; \
+	#then \
+	    #size=$(echo $line | awk '{print $10}'); \
+	    #echo "/srv/ftp/$filename $size"; \
+	#fi \
+    #done | awk '{size[$1]+=$2}END{for (i in size){print size[i],i}}' | \
+    #sort -n -r | \
+    #head -n 50 > /tmp/hotfiles
+    #head -n 100 | tail -n 80 | grep -v iso \
+    #xargs $HOME/bin/cache-tools/fadv -w 
+tail -n 5000 /home/log/nginx/access.log | \
+    while read line; \
+    do \
+	code=$(echo $line | awk '{print $9}') \
+	filename=$(echo $line | awk '{print $7}'); \
+	if [ -f "/srv/ftp/$filename" -a "x${code}x" == "x200x" ]; \
+	then \
+	    echo "/srv/ftp/$filename"; \
+	fi \
+    done | awk '{size[$1]++}END{for (i in size){print size[i],i}}' | \
+    sort -n -r | \
+    head -n 30 > /tmp/hotfiles
+
+# cache at most 5 ISO files. (usually the first 10 files are all ISOs)
+#head -n 5 /tmp/hotfiles | awk '{print $2}' | xargs $HOME/bin/cache-tools/fadv -w
+cat /tmp/hotfiles | grep -v iso | awk '{print $2}' |xargs $HOME/bin/cache-tools/fadv -w
+

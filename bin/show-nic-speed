@@ -1,0 +1,49 @@
+#!/bin/bash
+
+## author: Zhang Cheng <StephenPCG@gmail.com>
+## If you have any problems using this script, please contact me.
+
+## Show network interface card speed
+
+IFCONFIG="/sbin/ifconfig"
+
+while true;
+do
+    #ETH0_STAT=$(${IFCONFIG} eth0 | grep bytes | sed -ne 's#.*RX bytes:\([0-9]*\).*TX bytes:\([0-9]*\).*#\1 \2#gp')
+    #ETH1_STAT=$(${IFCONFIG} eth1 | grep bytes | sed -ne 's#.*RX bytes:\([0-9]*\).*TX bytes:\([0-9]*\).*#\1 \2#gp')
+    ETH0_STAT=$(cat /proc/net/dev | grep vlan95 | sed -ne 's/vlan95://p' | awk '{print $1,$9}')
+    ETH1_STAT=$(cat /proc/net/dev | grep vlan10 | sed -ne 's/vlan10://p' | awk '{print $1,$9}')
+
+    echo "${ETH0_STAT} ${ETH1_STAT}"
+
+    sleep 1
+done | awk 'BEGIN{
+    old_eth0rx=0;old_eth0tx=0;
+    old_eth1rx=0;old_eth1tx=0;
+    "tput cuu1"  | getline CursorUp;
+    printf "\tRX (MB/s)\tTX (MB/s)\n\t\t\t\t\t(CERNET/CERNET2)\n\t\t\t\t\t(China Telecom)\n"}{
+    eth0rx=$1;eth0tx=$2;
+    eth1rx=$3;eth1tx=$4;
+    if(old_eth0rx!=0) {
+	eth0rx_delta=eth0rx-old_eth0rx;
+	eth0tx_delta=eth0tx-old_eth0tx;
+	eth1rx_delta=eth1rx-old_eth1rx;
+	eth1tx_delta=eth1tx-old_eth1tx;
+    }else {
+	eth0rx_delta=0;eth0tx_delta=0;eth1rx_delta=0;eth1tx_delta=0;
+    }
+    eth0rx_speed=eth0rx_delta/1048576;
+    eth0tx_speed=eth0tx_delta/1048576;
+    eth1rx_speed=eth1rx_delta/1048576;
+    eth1tx_speed=eth1tx_delta/1048576;
+    printf CursorUp; printf CursorUp;
+    printf "\rvlan95\t%.2f MB/s\t%.2f MB/s\nvlan10\t%.2f MB/s\t%.2f MB/s\nALL\t%.2f MB/s\t%.2f MB/s",
+	eth0rx_speed,
+	eth0tx_speed,
+	eth1rx_speed,
+	eth1tx_speed,
+	eth0rx_speed+eth1rx_speed,
+	eth0tx_speed+eth1tx_speed;
+    old_eth0rx=eth0rx;old_eth0tx=eth0tx;
+    old_eth1rx=eth1rx;old_eth1tx=eth1tx;
+    }'

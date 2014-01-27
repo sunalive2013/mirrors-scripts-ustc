@@ -1,0 +1,7 @@
+#!/bin/bash
+
+## As fedora requires to run report mirror after each sync
+
+## $1 should be rsync return code
+RET=$1
+[[ ${RET} -eq 0 || ${RET} -eq 23 || ${RET} -eq 24 ]] && $HOME/bin/report_mirror --config $HOME/etc/report_mirror-rpmfusion.conf > /dev/null

@@ -1,0 +1,255 @@
+#!/bin/bash
+
+## print the mirror sync status
+
+## algo:
+##  foreach dir in log/
+##	if exist *.log; 
+##		mirror is under syncing, print the start time (create time)
+##	if exist *.log.0
+##		mirror is synced, print the finish time (access time)
+##	if exist *.error.0 && .error.0 is not null
+##		there are errors, print status
+
+LOGBASE="$HOME/log/"
+
+TD_RUNNING="<td class='td-archive-running'></td>"
+TD_FINISHED="<td class='td-archive-finished'></td>"
+TD_NODATA="<td class='td-nodata'></td>"
+_TD_ARCHIVE_NAME="<td class='td-archive-name'>"
+_TD_ARCHIVE_SYNCTIME="<td class='td-archive-synctime'>"
+_TD_ARCHIVE_SIZE="<td class='td-archive-size'>"
+TD_SUCCEED="<td class='td-archive-succeed'></td>"
+TD_FAIL="<td class='td-archive-fail'></td>"
+TD_UNKNOWN="<td class='td-archive-unknown'></td>"
+TD_="</td>"
+_TR="<tr>"
+TR_="</tr>\n"
+
+ECHO='echo -ne'
+
+function toHumanReadableSize {
+echo $1 | awk '{sum=$1; \
+	hum[1024**3]="GB"; \
+	hum[1024**2]="MB"; \
+	hum[1024]="KB"; \
+	for (x=1024**3; x>=1024; x/=1024){ \
+	    if (sum>=x) { \
+		printf "%.2f %s\n",sum/x,hum[x]; \
+		break \
+	    } \
+	} \
+    }'
+}
+
+function getSyncScript {
+   case $1 in 
+	debian|debian-cd|debian-multimedia|debian-security|backports|emdebian|nexenta|ubuntu)
+	    ## use ftpsync
+	    echo "ftpsync"
+	    ;;
+	chromium-buildbot)
+	    ## use mirror-chromium
+	    echo "chromium"
+	    ;;
+	*)
+	    ## default, use ustcsync
+	    echo "ustcsync" 
+	    ;;
+    esac
+}
+
+## get sync status
+## param1: archive name
+## param2: script type
+##	to avoid invoking getSyncScript multiple times on single archive name
+## return: "running", "finished", "nodata"
+function getSyncStatus {
+    local archive_name=$1
+    local sync_script=$2
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	echo "nodata"
+    else
+	[[ -f ${LOGDIR}/${sync_script}-${archive_name}.log ]] && \
+	    echo "running" || echo "finished"
+    fi
+}
+
+## get the sync exit status
+## param1: archive name
+## param2: sync script type
+## param3: sync status
+## return: "success"/"fail"/"unknown"/"nodata"
+function getSyncExitStatus {
+    local archive_name=$1
+    local sync_script=$2
+    local sync_status=$3
+
+    if [ ${sync_status} == "running" ];
+    then
+	echo "unknown"
+	return
+    fi
+
+    if [ "x${sync_script}x" == "xftpsyncx" ]; 
+    then
+	if grep -q 'ERROR' ${LOGDIR}/${sync_script}-${archive_name}.log.0;
+	then 
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    elif [ "x${sync_script}x" == "xustcsyncx" ];
+    then
+	if grep -q 'rsync error' ${LOGDIR}/${sync_script}-${archive_name}.log.0
+	then
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    elif [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	echo "nodata"
+    fi
+}
+
+## get the last sync activity time
+## param1: archive name
+## param2: sync script type
+## param3: sync status
+## return: '+%Y-%m-%d %H:%M:%S'
+function getSyncTime {
+    local archive_name=$1
+    local sync_script=$2
+    local sync_status=$3
+    
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	echo "nodata"
+	return
+    fi
+    
+    local filename="${LOGDIR}/${sync_script}-${archive_name}.log"
+    if [ ${sync_status} == "finished" ];
+    then
+	filename="${filename}.0"
+    fi
+
+    echo "$(date "+%Y-%m-%d %H:%M:%S" -r ${filename})"
+}
+
+## get the archive size from rsync log
+## param1: archive name
+## param2: sync script type
+## return: "nodata" or human readable size
+function getArchiveSize {
+    local archive_name=$1
+    local sync_script=$2
+
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	echo "nodata"
+	return
+    fi
+
+    if [ "x${sync_script}x" == "xftpsyncx" ]; 
+    then
+	filename=${LOGDIR}/rsync-${sync_script}-${archive_name}.log.0
+    elif [ "x${sync_script}x" == "xustcsyncx" ];
+    then
+	filename=${LOGDIR}/${sync_script}-${archive_name}.log.0
+    fi 
+    if [ ! -f ${filename} ];
+    then
+	echo "nodata"
+	return
+    else
+	size=$(tail -n 1 ${filename} | grep 'total size' | sed -ne 's#total size is \([0-9]*\).*#\1#p')
+	if [ "x${size}x" == "xx" ];
+	then
+	    echo "nodata"
+	else
+	    echo $(toHumanReadableSize ${size})
+	fi
+    fi
+}
+
+function getArchiveRealName {
+    case $1 in
+	backports)
+	    echo "backports.org"
+	    ;;
+	*)
+	    echo "$1"
+	    ;;
+    esac
+}
+
+$ECHO "<p><span id='update-time'>$(date '+%Y-%m-%d %H:%M:%S')</span></p>"
+$ECHO "<table class='tbl-status'><thead><tr>"
+$ECHO "<th class='th-archive-name'></th>"
+$ECHO "<th class='th-archive-syncstatus'></th>"
+$ECHO "<th class='th-archive-synctime'></th>"
+$ECHO "<th class='th-archive-exitstatus'></th>"
+$ECHO "<th class='th-archive-size'></th>"
+$ECHO "</tr></thead><tbody>"
+
+for mirror in $(ls ${LOGBASE});
+do
+    LOGDIR=${LOGBASE}${mirror}
+
+    archive_real_name=$(getArchiveRealName ${mirror})
+    sync_script=$(getSyncScript ${mirror})
+    sync_status=$(getSyncStatus ${mirror} ${sync_script})
+    sync_exit_status=$(getSyncExitStatus ${mirror} ${sync_script} ${sync_status})
+    sync_time=$(getSyncTime ${mirror} ${sync_script} ${sync_status})
+    archive_size=$(getArchiveSize ${mirror} ${sync_script})
+
+    $ECHO "${_TR}"
+
+    $ECHO "${_TD_ARCHIVE_NAME}${archive_real_name}${TD_}"
+
+    case $sync_status in
+	"running")
+	    $ECHO "${TD_RUNNING}"
+	    ;;
+	"finished")
+	    $ECHO "${TD_FINISHED}"
+	    ;;
+	"nodata")
+	    $ECHO "${TD_NODATA}"
+	    ;;
+    esac
+
+    if [ "${sync_time}" == "nodata" ];
+    then
+	$ECHO "${TD_NODATA}"
+    else
+	$ECHO "${_TD_ARCHIVE_SYNCTIME}${sync_time}${TD_}"
+    fi
+
+    case $sync_exit_status in
+	"success")
+	    $ECHO "${TD_SUCCEED}"
+	    ;;
+	"fail")
+	    $ECHO "${TD_FAIL}"
+	    ;;
+	"unknown")
+	    $ECHO "${TD_UNKNOWN}"
+	    ;;
+	"nodata")
+	    $ECHO "${TD_NODATA}"
+	    ;;
+    esac
+
+    [[ ${archive_size} == "nodata" ]] && \
+	$ECHO "${TD_NODATA}" || \
+	$ECHO "${_TD_ARCHIVE_SYNCTIME}${archive_size}${TD_}"
+
+    $ECHO "${TR_}"
+#done | sort -k 5 -r -t'|' | sed -ne 's/|//gp' # sort by last activity
+#done | sort -k 8 -h -r -t'|' | sed -ne 's/|//gp'  # sort by archive size
+done
+$ECHO "</tbody></table>"

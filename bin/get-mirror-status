@@ -1,0 +1,454 @@
+#!/bin/bash
+
+## author: Zhang Cheng <StephenPCG@gmail.com>
+## If you have any problems using this script, please contact me.
+
+## NOTE!! This script is no longer used since 2011-07-07 22:20
+
+## print the mirror sync status
+
+## algo:
+##  foreach dir in log/
+##	if exist *.log; 
+##		mirror is under syncing, print the start time (create time)
+##	if exist *.log.0
+##		mirror is synced, print the finish time (access time)
+##	if exist *.error.0 && .error.0 is not null
+##		there are errors, print status
+
+LOGBASE="$HOME/log/"
+ETCBASE="$HOME/etc/"
+
+#TD_OFFICIAL="<td class='td-archive-official'></td>"
+#TD_OFFICIAL_PENDING="<td class='td-archive-official-pending'></td>"
+#TD_OFFICIAL_NO="<td class='td-archive-official-no'></td>"
+TD_RUNNING="<td class='td-archive-running'></td>"
+TD_FINISHED="<td class='td-archive-finished'></td>"
+TD_NODATA="<td class='td-nodata'></td>"
+_TD_ARCHIVE_NAME="<td class='td-archive-name'>"
+_TD_ARCHIVE_SYNCTIME="<td class='td-archive-synctime'>"
+_TD_ARCHIVE_SIZE="<td class='td-archive-size'>"
+_TD_ARCHIVE_UPSTREAM="<td class='td-archive-upstream'>"
+TD_SUCCEED="<td class='td-archive-succeed'></td>"
+TD_FAIL="<td class='td-archive-fail'></td>"
+TD_FAIL_RESET="<td class='td-archive-fail td-archive-fail-reset'></td>"
+TD_FAIL_TIMEOUT="<td class='td-archive-fail td-archive-fail-timeout'></td>"
+TD_UNKNOWN="<td class='td-archive-unknown'></td>"
+TD_="</td>"
+_TR="<tr>"
+TR_="</tr>\n"
+
+ECHO='echo -ne'
+
+## convert size in 'bytes' to human readable size, suffix GB/MB/KB
+## param1: number in 'bytes'
+## return: number with suffix GB/MB/KB
+function toHumanReadableSize {
+echo $1 | awk '{sum=$1; \
+	hum[1024**3]="GB"; \
+	hum[1024**2]="MB"; \
+	hum[1024]="KB"; \
+	for (x=1024**3; x>=1024; x/=1024){ \
+	    if (sum>=x) { \
+		printf "%.2f %s\n",sum/x,hum[x]; \
+		break \
+	    } \
+	} \
+    }'
+}
+
+## get sync script
+## param1: archive name
+## return: ftpsync/ustcsync/...
+function getSyncScript {
+   case $1 in 
+        debian-cd)
+	    ## use cd-mirror
+	    echo "cd-mirror"
+	    ;;
+	debian|debian-*|emdebian|nexenta|ubuntu)
+	    ## use ftpsync
+	    echo "ftpsync"
+	    ;;
+	chromium-buildbot)
+	    ## use mirror-chromium
+	    echo "chromium"
+	    ;;
+	apt-mirror)
+	    ## use mirror-apt-mirror
+	    echo "apt-mirror"
+	    ;;
+	*)
+	    ## default, use ustcsync
+	    echo "ustcsync" 
+	    ;;
+    esac
+}
+
+## get sync status
+## param1: archive name
+## param2: script type
+##	to avoid invoking getSyncScript multiple times on single archive name
+## return: "running", "finished", "nodata"
+function getSyncStatus {
+    local archive_name=$1
+    local sync_script=$2
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	[[ -f ${LOGDIR}/update-chromium.log ]] && \
+	    echo "running" || echo "finished"
+    elif [ "x${sync_script}x" == "xapt-mirrorx" ];
+    then 
+	[[ -f ${LOGDIR}/apt-mirror.log ]] && \
+	    echo "running" || echo "finished"
+    elif [ "x${sync_script}x" == "xcd-mirrorx" ];
+    then
+	[[ -f ${LOGDIR}/debian-cd-mirror.log ]] && \
+	    echo "running" || echo "finished"
+    #elif [ "x${archive_name}x" == "xdebianx" ];
+    #then
+	#[[ -f ${LOGDIR}/ftpsync.log ]] && \
+	    #echo "running" || echo "finished"
+    else
+	[[ -f ${LOGDIR}/${sync_script}-${archive_name}.log ]] && \
+	    echo "running" || echo "finished"
+    fi
+}
+
+## get the sync exit status
+## param1: archive name
+## param2: sync script type
+## param3: sync status
+## return: "success"/"fail"/"unknown"/"nodata"
+function getSyncExitStatus {
+    local archive_name=$1
+    local sync_script=$2
+    local sync_status=$3
+
+    if [ ${sync_status} == "running" ];
+    then
+	echo "unknown"
+	return
+    fi
+
+    #if [ "x${archive_name}x" == "xdebianx" ]; 
+    #then
+	#if grep -q 'ERROR' ${LOGDIR}/${sync_script}.log.0 > /dev/null 2>&1;
+	#then 
+	    #echo "fail"
+	#else
+	    #echo "success"
+	#fi
+    #elif [ "x${sync_script}x" == "xftpsyncx" ]; 
+    if [ "x${sync_script}x" == "xftpsyncx" ]; 
+    then
+	if grep -q 'ERROR' ${LOGDIR}/${sync_script}-${archive_name}.log.0 > /dev/null 2>&1;
+	then 
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    elif [ "x${sync_script}x" == "xustcsyncx" ];
+    then
+	if grep -q 'rsync error' ${LOGDIR}/${sync_script}-${archive_name}.log.0 > /dev/null 2>&1;
+	then
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    elif [ "x${sync_script}x" == "xcd-mirrorx" ];
+    then
+	echo "success" ## haven't seen any failure, don't know how to tell failure
+    elif [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	if grep -q 'ERROR' ${LOGDIR}/update-chromium.log.0 > /dev/null 2>&1;
+	then 
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    elif [ "x${sync_script}x" == "xapt-mirrorx" ];
+    then
+	if grep -q 'ERROR' ${LOGDIR}/apt-mirror.log.0 > /dev/null 2>&1;
+	then 
+	    echo "fail"
+	else
+	    echo "success"
+	fi
+    fi
+}
+
+## get the last sync activity time
+## param1: archive name
+## param2: sync script type
+## param3: sync status
+## return: '+%Y-%m-%d %H:%M:%S'
+function getSyncTime {
+    local archive_name=$1
+    local sync_script=$2
+    local sync_status=$3
+    
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	local filename="${LOGDIR}/update-chromium.log"
+    elif [ "x${sync_script}x" == "xapt-mirrorx" ];
+    then
+	local filename="${LOGDIR}/apt-mirror.log"
+    #elif [ "x${archive_name}x" == "xdebianx" ];
+    #then
+	#local filename="${LOGDIR}/rsync-ftpsync.log"
+    elif [ "x${sync_script}x" == "xcd-mirrorx" ]; 
+    then
+	local filename="${LOGDIR}/debian-cd-mirror.log"
+    elif [ "x${archive_name}x" == "xdebianx" ];
+    then
+	local filename="${LOGDIR}/rsync-ftpsync.log"
+    elif [ "x${sync_script}x" == "xftpsyncx" ];
+    then
+	local filename="${LOGDIR}/rsync-${sync_script}-${archive_name}.log"
+    else
+	local filename="${LOGDIR}/${sync_script}-${archive_name}.log"
+    fi
+    
+    if [ ${sync_status} == "finished" ];
+    then
+	filename="${filename}.0"
+    fi
+
+    if [ ! -e "${filename}" ]; then
+	echo "nodata"
+    else
+	echo "$(date "+%Y-%m-%d %H:%M:%S" -r ${filename})"
+    fi
+}
+
+## get the archive size from rsync log
+## param1: archive name
+## param2: sync script type
+## return: "nodata" or human readable size
+function getArchiveSize {
+    local archive_name=$1
+    local sync_script=$2
+
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then
+	size=$(grep -e '^[0-9.]*[MG]\s*/srv/ftp/chromium-buildbot' ${LOGDIR}/update-chromium.log.0 |sed -ne 's#^\([0-9.]*\)\([MG]\).*#\1 \2B#gp')
+	echo "${size}"
+	return
+    fi
+    if [ "x${sync_script}x" == "xapt-mirrorx" ];
+    then
+	size=$(grep -e '^[0-9.]*[MG]\s*/srv/ftp/.apt-mirror' ${LOGDIR}/apt-mirror.log.0 |sed -ne 's#^\([0-9.]*\)\([MG]\).*#\1 \2B#gp')
+	echo "${size}"
+	return
+    fi
+
+    #if [ "x${archive_name}x" == "xdebianx" ];
+    #then
+	#filename="${LOGDIR}/rsync-${sync_script}.log.0"
+    #elif [ "x${sync_script}x" == "xftpsyncx" ]; 
+    if [ "x${sync_script}x" == "xftpsyncx" ]; 
+    then
+	filename="${LOGDIR}/rsync-${sync_script}-${archive_name}.log.0"
+    elif [ "x${sync_script}x" == "xustcsyncx" ];
+    then
+	filename="${LOGDIR}/${sync_script}-${archive_name}.log.0"
+    elif [ "x${sync_script}x" == "xcd-mirrorx" ];
+    then
+	filename="${LOGDIR}/rsync-debian-cd-mirror.log.0"
+    fi 
+    if [ ! -f ${filename} ];
+    then
+	echo "nodata"
+	return
+    else
+	size=$(tail -n 2 ${filename} | grep 'total size' | sed -ne 's#total size is \([0-9]*\).*#\1#p')
+	if [ "x${size}x" == "xx" ];
+	then
+	    echo "nodata"
+	else
+	    echo $(toHumanReadableSize ${size})
+	fi
+    fi
+}
+
+function getArchiveUpstream {
+    local archive_name=$1
+    local sync_script=$2
+
+    if [ "x${sync_script}x" == "xchromiumx" ];
+    then 
+	filename="$HOME/bin/mirror-chromium"
+	upstream=$(grep -e '^FROM' ${filename} | sed -ne 's#^.*"\(.*\)"#\1#gp')
+	echo "${upstream}"
+	return
+    fi
+
+    if [ "x${sync_script}x" == "xapt-mirrorx" ];
+    then 
+	upstream="http://backtrack-linux.org/"
+	echo ${upstream}
+	return
+    fi
+
+    if [ "x${sync_script}x" == "xftpsyncx" ];
+    then 
+	filename="${ETCBASE}/ftpsync-${archive_name}.conf"
+    elif [ "x${sync_script}x" == "xustcsyncx" ];
+    then
+	filename="${ETCBASE}/ustcsync-${archive_name}.conf"
+    elif [ "x${sync_script}x" == "xcd-mirrorx" ];
+    then
+	filename="${ETCBASE}/debian-cd-mirror.conf"
+    fi
+
+    if [ ! -f ${filename} ];
+    then
+	echo "nodata"
+	return
+    else
+	upstream=$(grep -e '^RSYNC_HOST' ${filename} | sed -ne 's#^.*"\(.*\)"#\1#gp')
+	path=$(grep -e '^RSYNC_PATH' ${filename} | sed -ne 's#^.*"\(.*\)"#\1#gp')
+	if [ "x${upstream}x" == "xx" ];
+	then 
+	    echo "nodata"
+	else
+	    echo "rsync://${upstream}/${path}"
+	fi
+    fi
+}
+
+## in some rare case, log dir name is not the real archive name, 
+## to make the output more clearly, use this function to show archive name
+## param1: archive name shown as log dir name
+## return: real archive name
+function getArchiveRealName {
+    case $1 in
+	backports) echo '<a href="/debian-backports/">debian-backports</a>' ;;
+	cpan) echo '<a href="/CPAN/">CPAN</a>';;
+	ctan) echo '<a href="/CTAN/">CTAN</a>';;
+	cran) echo '<a href="/CRAN/">CRAN</a>';;
+	xorg) echo '<a href="/Xorg/">Xorg</a>';;
+    backtrack) echo '<a href="/backtrack/iso/">Back Track ISO</a>';;
+backtrack-package) echo '<a href="/backtrack/">Back Track Packages</a>';;
+    fedora-linux) echo '<a href="/fedora/linux/">fedora-linux</a>';;
+    dotdeb) echo '<a href="/dotdeb/packages/">Dotdeb Packages</a>';;
+    dotdeb-php53) echo '<a href="/dotdeb/php53/">Dotdeb PHP53</a>';;
+    apt-mirror) echo '<a href="/backtrack/">Back Track Packages</a>';;
+cygwinports) echo '<a href="/sourceware.org/cygwinports/">Cygwin Ports Project</a>';;
+	*)
+	    echo "<a href=\"/$1/\">$1</a>"
+	    ;;
+    esac
+}
+
+## whether this mirror is official
+## param1: archive name show as log dir name
+## return: yes pending no
+function getOfficialStatus {
+    case $1 in
+	debian|debian-cd|debian-backports|cpan|ctan|ubuntu|ubuntu-releases|archlinux)
+	    echo "yes"
+	    ;;
+	debian-security)
+	    echo "pending"
+	    ;;
+	*)
+	    echo "no"
+	    ;;
+    esac
+}
+
+$ECHO "<p><span id='update-time'>$(date '+%Y-%m-%d %H:%M:%S')</span></p>"
+$ECHO "<table class='tbl-status'><thead><tr>"
+$ECHO "<th class='th-archive-name'></th>"
+#$ECHO "<th class='th-archive-official'></th>"
+$ECHO "<th class='th-archive-syncstatus'></th>"
+$ECHO "<th class='th-archive-synctime'></th>"
+$ECHO "<th class='th-archive-exitstatus'></th>"
+$ECHO "<th class='th-archive-upstream'></th>"
+$ECHO "<th class='th-archive-size'></th>"
+$ECHO "</tr></thead><tbody>"
+
+for mirror in $(ls ${LOGBASE});
+do
+    LOGDIR=${LOGBASE}${mirror}
+
+    archive_real_name=$(getArchiveRealName ${mirror})
+    sync_script=$(getSyncScript ${mirror})
+    sync_status=$(getSyncStatus ${mirror} ${sync_script})
+    sync_exit_status=$(getSyncExitStatus ${mirror} ${sync_script} ${sync_status})
+    sync_time=$(getSyncTime ${mirror} ${sync_script} ${sync_status})
+    archive_upstream=$(getArchiveUpstream ${mirror} ${sync_script})
+    archive_size=$(getArchiveSize ${mirror} ${sync_script})
+    #archive_official_status=$(getOfficialStatus ${mirror})
+
+    $ECHO "${_TR}"
+
+    $ECHO "${_TD_ARCHIVE_NAME}${archive_real_name}${TD_}"
+
+    #case ${archive_official_status} in
+	#"yes")
+	    #$ECHO "${TD_OFFICIAL}"
+	    #;;
+	#"pending")
+	    #$ECHO "${TD_OFFICIAL_PENDING}"
+	    #;;
+	#"no")
+	    #$ECHO "${TD_OFFICIAL_NO}"
+	    #;;
+    #esac
+
+    case $sync_status in
+	"running")
+	    $ECHO "${TD_RUNNING}"
+	    ;;
+	"finished")
+	    $ECHO "${TD_FINISHED}"
+	    ;;
+	"nodata")
+	    $ECHO "${TD_NODATA}"
+	    ;;
+    esac
+
+    if [ "${sync_time}" == "nodata" ];
+    then
+	$ECHO "${TD_NODATA}"
+    else
+	$ECHO "${_TD_ARCHIVE_SYNCTIME}${sync_time}${TD_}"
+    fi
+
+    case $sync_exit_status in
+	"success")
+	    $ECHO "${TD_SUCCEED}"
+	    ;;
+	"fail")
+	    $ECHO "${TD_FAIL}"
+	    ;;
+	"unknown")
+	    $ECHO "${TD_UNKNOWN}"
+	    ;;
+	"nodata")
+	    $ECHO "${TD_NODATA}"
+	    ;;
+    esac
+
+    case $archive_upstream in
+	"nodata")
+	    $ECHO "${TD_NODATA}"
+	    ;;
+	*)
+	    $ECHO "${_TD_ARCHIVE_UPSTREAM}${archive_upstream}${TD_}"
+	    ;;
+    esac
+
+    [[ ${archive_size} == "nodata" ]] && \
+	$ECHO "${TD_NODATA}" || \
+	$ECHO "${_TD_ARCHIVE_SIZE}${archive_size}${TD_}"
+
+    $ECHO "${TR_}"
+## we can do the sort stuff here, but to save the server presure, let's move the hard work to browser client
+#done | sort -k 5 -r -t'|' | sed -ne 's/|//gp' # sort by last activity
+#done | sort -k 8 -h -r -t'|' | sed -ne 's/|//gp'  # sort by archive size
+done
+$ECHO "</tbody></table>"

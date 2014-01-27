@@ -1,0 +1,7 @@
+RSYNC_HOST="sample.com"
+RSYNC_PATH="sample"
+
+TO="/srv/ftp/sample/"
+
+EXCLUDE=""
+

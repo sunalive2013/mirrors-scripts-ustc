@@ -1,0 +1,29 @@
+#!/bin/bash
+
+BIN=$HOME/bin
+GET_STATUS=${BIN}/show-mirror-status
+
+echo "<html><head><title>USTC OSS Mirror Status</title></head><body>"
+
+echo -e "<style type=text/css>"
+echo -e "html{margin: auto auto;padding: 0 10%;}"
+echo -e "table{width: 100%;border:1px solid #000000}"
+echo -e "table td{border:1px solid #000000; text-align:right}"
+echo -e "</style>"
+
+echo -e "<table><tr>"
+echo -e "<th>Mirror</th> \
+	 <th>Status</th> \
+	 <th>Last Sync</th> \
+	 <th>Exit Status</th>"
+
+${GET_STATUS} | awk -F'\t' '{print \
+		    " <tr><td>", $1, \
+		    "</td><td>", $2, \
+		    "</td><td>", $3, \
+		    "</td><td>", $4, \
+		    "</td></tr>"}'
+
+echo -e "</table>"
+
+echo "</body>"

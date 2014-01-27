@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+$LOGDIR = $ENV{'HOME'} . '/log/';
+
+#opendir(DIR, $LOGDIR);
+#
+#foreach my $archive (readdir(DIR))
+#{
+#    print "log: $archive\n";
+#}
+#
+#closedir(DIR);
+
+foreach my $archive (<$LOGDIR*>)
+{
+    print "log: $archive\n";
+}

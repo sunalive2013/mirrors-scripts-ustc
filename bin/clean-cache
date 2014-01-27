@@ -1,0 +1,28 @@
+#!/bin/bash
+
+## clean cache of logs
+#find /home/log/ -type f -iname "*.log" -exec $HOME/bin/cache-tools/fadv -d {} 2>/dev/null \;
+$HOME/bin/cache-tools/fadv -d /home/log/nginx/access.log
+$HOME/bin/cache-tools/fadv -d /home/log/nginx/error.log
+$HOME/bin/cache-tools/fadv -d /home/log/proftpd/proftpd.log
+$HOME/bin/cache-tools/fadv -d /home/log/proftpd/extended.log
+$HOME/bin/cache-tools/fadv -d /home/log/proftpd/xferlog
+
+## process un-popular archives
+#for archive in freebsd; 
+#do
+#    ## only consider running rsync process
+#    if [ -f $HOME/log/$archive/ustcsync-${archive}.log ]; 
+#    then
+#	for file in $(cat $HOME/log/$archive/ustcsync-${archive}.log | awk '{print $1}')";
+#	do
+#	    path="/srv/ftp/$archive/$file"
+#	    if [ -f "$path" ];
+#	    then
+#		echo $path
+#		$HOME/bin/cache-tools/kocache $path
+#	    fi
+#	done
+#    fi
+#done
+

@@ -1,0 +1,89 @@
+#!/bin/bash
+
+## author: Zhang Cheng <StephenPCG@gmail.com>
+## If you have any problems using this script, please contact me.
+
+set -e
+
+BASEDIR=${BASEDIR:-"${HOME}"}
+
+VERSION="20110409"
+
+check_commandline() {
+    while [ $# -gt 0 ]; do
+	case "$1" in 
+	    sync:archive:*)
+		ARCHIVE=${1##sync:archive:}
+		ARCHIVE=${ARCHIVE//\/}
+		ARCHIVE=${ARCHIVE//.}
+		;;
+	    *)
+		echo "Unknow option ${1} ignored"
+		;;
+	esac
+	shift
+    done
+}
+
+#NAME="$(basename $0)"
+NAME="ustcsync"
+
+check_commandline $*
+
+if [ -z ${ARCHIVE} ]; then
+    echo -e "Usage: \n\t${NAME} sync:archive:<archive-name>"
+    exit 1
+else
+    NAME="${NAME}-${ARCHIVE}"
+fi
+
+if [ -f "${BASEDIR}/etc/${NAME}.conf" ]; then
+    . "${BASEDIR}/etc/${NAME}.conf"
+else
+    echo -e "Nono, you can't tell us about random archives. Bad boy!"
+    echo -e "Need conf file: ${BASEDIR}/etc/${NAME}.conf"
+    exit 1
+fi
+
+## for compatibility
+RSYNC_PATH=${RSYNC_PATH:-${RSYNC_DIR}}
+TO=${TO:-${RSYNC_DEST}}
+
+MIRRORNAME=${MIRRORNAME:-$(hostname -f)}
+LOGDIR=${LOGDIR:-"${BASEDIR}/log/${ARCHIVE}"}
+LOG=${LOG:-"${LOGDIR}/${NAME}.log"}
+
+LOGROTATE=${LOGROTATE:-14}
+
+LOCK=${LOCK:-"${TO}/Archive-Update-in-Process-${MIRRORNAME}"}
+LOCKTIMEOUT=${LOCKTIMEOUT:-18000}
+
+RSYNC_USER=${RSYNC_USER:-""}
+RSYNC_PASSWORD=${RSYNC_PASSWORD:-""}
+if [ ! -z ${RSYNC_USER} ]; then
+    RSYNC_HOST="${RSYNC_USER}@${RSYNC_HOST}"
+fi
+export RSYNC_PASSWORD
+
+RSYNC=${RSYNC:-rsync}
+RSYNC_BW=${RSYNC_BW:-0}
+RSYNC_MAXDELETE=${RSYNC_MAXDELETE:-4000}
+RSYNC_OPTIONS=${RSYNC_OPTIONS:-"-prltvHSB8192 --progress --timeout 3600 --delay-updates --safe-links --delete-delay --delete-excluded"}
+EXCLUDE="${EXCLUDE} --exclude .~tmp~/ --exclude Archive-Update-in-Process-${MIRRORNAME}"
+
+if lockfile -! -l ${LOCKTIMEOUT} -r 0 "${LOCK}"; then
+    echo "$(hostname -f) is unable to start rsync, lock file exists"
+    exit 1
+fi
+trap "rm -f ${LOCK} > /dev/null 2>&1" exit
+
+set +e
+
+#$RSYNC ${EXCLUDE} ${RSYNC_OPTIONS} --max-delete ${RSYNC_MAXDELETE} ${RSYNC_HOST}::${RSYNC_PATH} ${TO} > ${LOG} 2>&1
+$RSYNC ${EXCLUDE} ${RSYNC_OPTIONS} ${RSYNC_HOST}::${RSYNC_PATH} ${TO} > ${LOG} 2>&1
+RET=$?
+
+POST_EXEC=${POST_EXEC:-""}
+[[ ! -z ${POST_EXEC} && -e ${POST_EXEC} ]] && ${POST_EXEC} ${RET}
+
+savelog ${LOG} > /dev/null 

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+## Count hot visited file via rsync/nginx/proftpd
+
+STAT_BASE=$HOME/stat
+RSYNC_LOG=/home/log/rsyncd/rsyncd.log
+NGINX_LOG=/home/log/nginx/access.log
+
+function count_rsync(){
+    timespan=$1
+    STAT_FILE="$STAT_BASE/rsyncd/rsyncd-$(date -d $timespan '+%Y-%m-%d-%H').txt"
+    if [ ! -e $STAT_FILE ]; then
+	egrep "$(date -d $timespan '+%Y/%m/%d %H:..:..').*send.*\(\)" $RSYNC_LOG | \
+	    awk '{printf "%s/%s\n", $7,$9}' | \
+	    sort | \
+	    uniq -c | \
+	    sort -n -r > $STAT_FILE
+    fi
+}
+
+function count_nginx(){
+    timespan=$1
+    STAT_FILE="$STAT_BASE/nginx/nginx-$(date -d $timespan '+%Y-%m-%d-%H').txt"
+    if [ ! -e $STAT_FILE ]; then
+	egrep "$(date -d $timespan +%d/%b/%Y:%H:..:..).*\"GET[^\"]*\" 200" $NGINX_LOG | \
+	    awk '{print $7}' | \
+	    sort | \
+	    uniq -c | \
+	    sort -n -r > $STAT_FILE
+    fi
+}
+
+count_nginx $1

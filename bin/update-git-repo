@@ -1,0 +1,8 @@
+#!/bin/bash
+
+target="$1"
+cd "$target"
+
+git fetch -t origin master:master
+git update-server-info
+

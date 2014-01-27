@@ -1,0 +1,18 @@
+RSYNC_HOST="download.fedora.redhat.com"
+RSYNC_PATH="fedora-enchilada/linux/"
+TO="/srv/ftp2/fedora/linux/"
+
+RSYNC_MAXDELETE=5000
+
+#timestampNow=$(date --utc +%s)
+#yesterday=$((timestampNow - (60 * 60 * 24)))
+#tmpfile=$(mktemp rsync.XXXXXXXX)
+#curl \
+#"https://admin.fedoraproject.org/mirrormanager/rsyncFilter?categories=Fedora%20Linux&since=${yesterday}&stripprefix=pub/fedora" \
+#> ${tmpfile}
+#
+#EXCLUDE="--exclude-from=${tmpfile}"
+
+LOCKTIMEOUT=36000
+
+POST_EXEC="${HOME}/bin/run-report-mirror"
