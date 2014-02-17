@@ -9,6 +9,7 @@ import base64
 import bz2
 import socket
 
+
 class HostConfig(object):
     """Holder for config info from the configuration file"""
     def __init__(self):
@@ -20,19 +21,23 @@ class HostConfig(object):
                         }
 
 _translation = [chr(_x) for _x in range(256)]
+
+
 def _translate(s, altchars):
     translation = _translation[:]
     for k, v in altchars.items():
         translation[ord(k)] = v
     return s.translate(''.join(translation))
 
+
 def urlsafe_b64encode(s):
-   import binascii
-   altchars = '-_'
-   encoded = binascii.b2a_base64(s)[:-1]
-   if altchars is not None:
-      return _translate(encoded, {'+': altchars[0], '/': altchars[1]})
-   return encoded
+    import binascii
+    altchars = '-_'
+    encoded = binascii.b2a_base64(s)[:-1]
+    if altchars is not None:
+        return _translate(encoded, {'+': altchars[0], '/': altchars[1]})
+    return encoded
+
 
 def gen_dirtree(path):
     # structure here is:
@@ -63,11 +68,14 @@ def gen_dirtree(path):
 
     return dirtree
 
+
 def errorprint(error):
     sys.stderr.write(error+'\n')
 
+
 class MissingOption(Exception):
     pass
+
 
 def check_required_options(conf, section, required_options):
     for o in required_options:
@@ -76,11 +84,13 @@ def check_required_options(conf, section, required_options):
             raise MissingOption()
     return True
 
+
 def parse_value(value):
     """Split multi-line values into a list"""
     if value.find('\n') > -1:
         return value.split()
     return value
+
 
 def parse_section(conf, section, item, required_options, optional_options=[]):
     if conf.has_option(section, 'enabled'):
@@ -103,6 +113,7 @@ def parse_section(conf, section, item, required_options, optional_options=[]):
 
     return True
 
+
 def parse_global(conf, section, item):
     required_options = [ 'enabled', 'server' ]
     if not parse_section(conf, section, item, required_options):
@@ -110,14 +121,17 @@ def parse_global(conf, section, item):
         return False
     return True
 
+
 def parse_site(conf, section, item):
     required_options = [ 'enabled', 'name', 'password' ]
     return parse_section(conf, section, item, required_options)
+
 
 def parse_host(conf, section, item):
     required_options = [ 'enabled', 'name' ]
     optional_options = [ 'user_active' ]
     return parse_section(conf, section, item, required_options, optional_options=optional_options)
+
 
 def get_stats(conf, section):
     if conf.has_option(section, 'enabled'):
@@ -140,6 +154,7 @@ def get_stats(conf, section):
                 pass
     return statsdata
 
+
 def parse_category(conf, section, item, crawl):
     required_options = [ 'enabled', 'path' ]
     if not parse_section(conf, section, item, required_options):
@@ -150,6 +165,7 @@ def parse_category(conf, section, item, crawl):
         item.config[section.lower()]['dirtree'] = dirtree
     # database doesn't need to know the disk path
     del item.config[section.lower()]['path']
+
 
 def config(cfg, item, crawl=True):
     broken = False
@@ -181,7 +197,6 @@ def config(cfg, item, crawl=True):
         sys.exit(1)
 
     return True
-
 
 
 def main():
