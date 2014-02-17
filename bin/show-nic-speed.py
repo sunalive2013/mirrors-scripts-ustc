@@ -19,8 +19,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import curses
+import time
+
 
 class Interface:
     def __init__(self, timestamp, rx_bytes, rx_packets, tx_bytes, tx_packets):
@@ -38,6 +39,7 @@ class Interface:
         self.tx = [tx_bytes, tx_packets]
         self.timestamp = timestamp 
         return [rx_bps, rx_pps, tx_bps, tx_pps]
+
 
 class Screen:
     def __init__(self, nr_iface):
@@ -100,6 +102,7 @@ def extract_netdev_once():
 
     return
 
+
 def extract_netdev():
     while True:
         results = []
@@ -108,12 +111,14 @@ def extract_netdev():
         yield results
         time.sleep(1)
 
+
 def to_readable_bytes(size):
     for x in ['B/s', 'KB/s', 'MB/s']:
         if size < 1024.0:
             return "%3.1f %s" %(size, x)
         size /= 1024.0
     return "%3.1f GB/s" %(size)
+
 
 def to_readable_bits(size):
     size *= 8.0
@@ -122,6 +127,7 @@ def to_readable_bits(size):
             return "%3.1f %s" %(size, x)
         size /= 1024.0
     return "%3.1f Gb/s" %(size)
+
 
 def print_speed(name, speed, to_readable):
     rx_speed = to_readable(speed[0])
@@ -139,9 +145,9 @@ for iface in extract_netdev_once():
     name = iface[0]
     timestamp = float(iface[1])
     rx_bytes, rx_packets, tx_bytes, tx_packets = \
-            map(lambda x: int(x), iface[2:]) 
+        map(lambda x: int(x), iface[2:])
     interfaces[name] = \
-            Interface(timestamp, rx_bytes, rx_packets, tx_bytes, tx_packets)
+        Interface(timestamp, rx_bytes, rx_packets, tx_bytes, tx_packets)
 
 screen = Screen(nr_iface)
 
